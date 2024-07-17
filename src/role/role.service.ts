@@ -1,12 +1,20 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MENUS, PRIVILEGES, ROLES } from 'src/common/constant/constants';
+import {
+  MENUS,
+  PRIVILEGES,
+  ROLE_SUPER_ADMIN,
+  ROLES,
+} from 'src/common/constant/constants';
 import { Menu } from 'src/database/entity/menu.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/database/entity/user.entity';
 import { Role } from 'src/database/entity/role.entity';
 import { Privilege } from 'src/database/entity/privilege.entity';
+import { RolePrivilege } from 'src/database/entity/role-privilege.entity';
+import { RoleUser } from 'src/database/entity/role-user.entity';
+import { RoleResponseDto, UserRoleDto } from './dto';
 
 @Injectable()
 export class RoleService {
@@ -23,7 +31,61 @@ export class RoleService {
 
     @InjectRepository(Privilege)
     private privilegeRepository: Repository<Privilege>,
+
+    @InjectRepository(RolePrivilege)
+    private rolePrivilegeRepository: Repository<RolePrivilege>,
+
+    @InjectRepository(RoleUser)
+    private roleUserRepository: Repository<RoleUser>,
   ) {}
+
+  async roleAll(): Promise<RoleResponseDto[]> {
+    const roleList = await this.roleRepository.find({
+      where: { isDeleted: 'N' },
+    });
+    return roleList.map((it) => {
+      return new RoleResponseDto(it.code, it.name, []);
+    });
+  }
+
+  async getRoleByCode(code: string): Promise<RoleResponseDto> {
+    this.logger.log('getRoleByCode code: ', code);
+    const role = await this.roleRepository.findOne({
+      where: { code: code, isDeleted: 'N' },
+    });
+    this.logger.log('role: ', JSON.stringify(role));
+    const privilegeList = await this.rolePrivilegeRepository.find({
+      where: { roleCode: code, isDeleted: 'N' },
+    });
+
+    this.logger.log('privilegeList size: ', privilegeList.length);
+    const privilegeCodeList = privilegeList.map((it) => it.privilegeCode);
+    return new RoleResponseDto(role.code, role.name, privilegeCodeList);
+  }
+
+  async getRoleByUserId(userId: number): Promise<UserRoleDto> {
+    this.logger.log('getRoleByUserId userId: ', userId);
+    // ==> get role list
+    const roleUserList = await this.roleUserRepository.find({
+      where: { userId: userId, isDeleted: 'N' },
+    });
+
+    // ==> get privilege list
+    const userRoleDto = new UserRoleDto();
+    const privilegs = [];
+    for (const roleUser of roleUserList) {
+      const privilegeList = await this.rolePrivilegeRepository.find({
+        where: { roleCode: roleUser.roleCode, isDeleted: 'N' },
+      });
+
+      const privilegeCodeList = privilegeList.map((it) => it.privilegeCode);
+      privilegs.push(...privilegeCodeList);
+    }
+
+    userRoleDto.roleCodes = roleUserList.map((it) => it.roleCode);
+    userRoleDto.privilegeCodes = [...new Set(privilegs)];
+    return userRoleDto;
+  }
 
   async initialRole(): Promise<void> {
     try {
@@ -38,7 +100,6 @@ export class RoleService {
         menuEntity.code = menu.menu;
         menuEntity.name = menu.name;
         menuEntity.parent = null;
-        menuEntity.createdBy = 'SYSTEM';
         menuEntity.rn = menuRn;
         menuRn++;
         await this.menuRepository.save(menuEntity);
@@ -49,7 +110,6 @@ export class RoleService {
           subMenuEntity.code = subMenu.code;
           subMenuEntity.name = subMenu.name;
           subMenuEntity.parent = subMenu.parent;
-          subMenuEntity.createdBy = 'SYSTEM';
           subMenuEntity.rn = subMenuRn;
           subMenuRn++;
           await this.menuRepository.save(subMenuEntity);
@@ -57,19 +117,21 @@ export class RoleService {
         subMenuRn = 1;
       }
 
+      const username = 'superadmin';
+      const password = 'superadmin';
+
       // ==> create user super admin
-      const userExist = await this.userRepository.findOne({
-        where: { username: 'superadmin' },
+      let user = await this.userRepository.findOne({
+        where: { username: username },
       });
 
-      if (!userExist) {
+      if (!user) {
         this.logger.log('create user superadmin ');
-        const hashedPassword = await bcrypt.hash('superadmin', 10);
-        const user = new User();
-        user.username = 'superadmin';
-        user.password = hashedPassword;
-        user.createdBy = 'SYSTEM';
-        await this.userRepository.save(user);
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const userEntity = new User();
+        userEntity.username = username;
+        userEntity.password = hashedPassword;
+        user = await this.userRepository.save(userEntity);
       }
 
       // ==> create role
@@ -81,7 +143,20 @@ export class RoleService {
         roleEntity.name = role.name;
         roleEntity.rn = roleRn;
         roleRn++;
-        await this.roleRepository.save(role);
+        await this.roleRepository.save(roleEntity);
+      }
+
+      // ==> create role user
+      this.logger.log('map role user ');
+      const existRoleUser = await this.roleUserRepository.findOne({
+        where: { roleCode: ROLE_SUPER_ADMIN, userId: user.id },
+      });
+
+      if (!existRoleUser) {
+        const roleUserEntity = new RoleUser();
+        roleUserEntity.roleCode = ROLE_SUPER_ADMIN;
+        roleUserEntity.userId = user.id;
+        await this.roleUserRepository.save(roleUserEntity);
       }
 
       // ==> create privilege
@@ -95,7 +170,25 @@ export class RoleService {
         privilegeEntity.rn = privilegeRn;
         privilegeRn++;
         await this.privilegeRepository.save(privilegeEntity);
+
+        // ==> map role & privilege
+        this.logger.log('map role & privilege ');
+        const existRolePrivilege = await this.rolePrivilegeRepository.findOne({
+          where: {
+            roleCode: ROLE_SUPER_ADMIN,
+            privilegeCode: privilege.code,
+            isDeleted: 'N',
+          },
+        });
+        this.logger.log('existRolePrivilege: ', !existRolePrivilege);
+        if (!existRolePrivilege) {
+          const rolePrivilegeEntity = new RolePrivilege();
+          rolePrivilegeEntity.roleCode = ROLE_SUPER_ADMIN;
+          rolePrivilegeEntity.privilegeCode = privilege.code;
+          this.rolePrivilegeRepository.save(rolePrivilegeEntity);
+        }
       }
+
       this.logger.log('initial role complete');
     } catch (error) {
       this.logger.error(error.message);

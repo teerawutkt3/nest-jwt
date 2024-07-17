@@ -4,6 +4,7 @@ import { UsersService } from 'src/users/users.service';
 import { LoginRequestDto, LoginResponseDto, RegisterRequestDto } from './dto';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/database/entity/user.entity';
+import { RoleService } from 'src/role/role.service';
 
 @Injectable()
 export class AuthService {
@@ -11,6 +12,7 @@ export class AuthService {
 
   constructor(
     private usersService: UsersService,
+    private roleService: RoleService,
     private jwtService: JwtService,
   ) {}
 
@@ -26,9 +28,17 @@ export class AuthService {
     return user;
   }
 
-  async login(user: LoginRequestDto): Promise<LoginResponseDto> {
-    this.logger.log('login req: ', JSON.stringify(user));
-    const payload = { username: user.username, sub: user.username };
+  async login(req: LoginRequestDto): Promise<LoginResponseDto> {
+    this.logger.log('login req: ', JSON.stringify(req));
+
+    const user = await this.usersService.findOne(req.username);
+    const roles = await this.roleService.getRoleByUserId(user.id);
+
+    const sub = {
+      username: req.username,
+      roles: roles,
+    };
+    const payload = { username: req.username, sub: sub };
     return {
       access_token: this.jwtService.sign(payload),
     };

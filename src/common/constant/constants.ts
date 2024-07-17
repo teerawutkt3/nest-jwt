@@ -17,9 +17,14 @@ export const MENUS = [
   },
 ];
 
+export const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
+export const ROLE_ADMIN = 'ADMIN';
+export const ROLE_MEMBER = 'MEMBER';
+
 export const ROLES = [
-  { code: 'ADMIN', name: 'ADMIN' },
-  { code: 'MEMBER', name: 'MEMBER' },
+  { code: ROLE_SUPER_ADMIN, name: 'SUPER_ADMIN' },
+  { code: ROLE_ADMIN, name: 'ADMIN' },
+  { code: ROLE_MEMBER, name: 'MEMBER' },
 ];
 
 export const PRIVILEGES = [

@@ -9,10 +9,10 @@ export class RegisterRequestDto {
 }
 
 export class LoginRequestDto {
-  @ApiProperty({ required: false, default: 'admin' })
+  @ApiProperty({ required: false, default: 'superadmin' })
   username: string;
 
-  @ApiProperty({ required: false, default: 'admin' })
+  @ApiProperty({ required: false, default: 'superadmin' })
   password: string;
 }
 

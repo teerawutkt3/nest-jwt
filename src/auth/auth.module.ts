@@ -5,11 +5,13 @@ import { PassportModule } from '@nestjs/passport';
 import { LocalStrategy } from './jwt/local.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt/jwt.strategy';
-import { jwtConstants } from './constants';
+import { jwtConstants } from './jwt/constants';
 import { AuthController } from './auth.controller';
+import { RoleModule } from 'src/role/role.module';
 
 @Module({
   imports: [
+    RoleModule,
     UsersModule,
     PassportModule,
     JwtModule.register({
