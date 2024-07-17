@@ -83,7 +83,6 @@ export class RoleService {
         roleRn++;
         await this.roleRepository.save(role);
       }
-      await this.roleRepository.save({ code: 'ADMIN2', name: 'ADMIN', rn: 1 });
 
       // ==> create privilege
       this.logger.log('create privilege ');
