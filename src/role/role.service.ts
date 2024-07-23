@@ -14,7 +14,8 @@ import { Role } from 'src/database/entity/role.entity';
 import { Privilege } from 'src/database/entity/privilege.entity';
 import { RolePrivilege } from 'src/database/entity/role-privilege.entity';
 import { RoleUser } from 'src/database/entity/role-user.entity';
-import { RoleResponseDto, UserRoleDto } from './dto';
+import { RoleResponseDto } from './role.dto';
+import { Permission } from 'src/common/dto/dto';
 
 @Injectable()
 export class RoleService {
@@ -63,7 +64,7 @@ export class RoleService {
     return new RoleResponseDto(role.code, role.name, privilegeCodeList);
   }
 
-  async getRoleByUserId(userId: number): Promise<UserRoleDto> {
+  async getRoleByUserId(userId: number): Promise<Permission> {
     this.logger.log('getRoleByUserId userId: ', userId);
     // ==> get role list
     const roleUserList = await this.roleUserRepository.find({
@@ -71,7 +72,7 @@ export class RoleService {
     });
 
     // ==> get privilege list
-    const userRoleDto = new UserRoleDto();
+    const permission = new Permission();
     const privilegs = [];
     for (const roleUser of roleUserList) {
       const privilegeList = await this.rolePrivilegeRepository.find({
@@ -82,9 +83,9 @@ export class RoleService {
       privilegs.push(...privilegeCodeList);
     }
 
-    userRoleDto.roleCodes = roleUserList.map((it) => it.roleCode);
-    userRoleDto.privilegeCodes = [...new Set(privilegs)];
-    return userRoleDto;
+    permission.roles = roleUserList.map((it) => it.roleCode);
+    permission.privileges = [...new Set(privilegs)];
+    return permission;
   }
 
   async initialRole(): Promise<void> {

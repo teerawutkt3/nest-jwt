@@ -1,7 +1,12 @@
-import { Controller, Get, Param } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RoleService } from './role.service';
 import { CommonResponse } from 'src/common/dto/dto';
+import {
+  AUTHGUARD_JWT,
+  SWAGGER_ACCESS_TOKEN,
+} from 'src/common/constant/constants';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('role')
 @Controller('role')
@@ -15,11 +20,16 @@ export class RoleController {
   }
 
   @Get('/all')
+  @UseGuards(AuthGuard(AUTHGUARD_JWT))
+  @ApiBearerAuth(SWAGGER_ACCESS_TOKEN)
   async roleAll() {
-    return new CommonResponse('success', await this.roleService.roleAll());
+    const data = await this.roleService.roleAll();
+    return new CommonResponse('success', data);
   }
 
   @Get('/:code')
+  @UseGuards(AuthGuard(AUTHGUARD_JWT))
+  @ApiBearerAuth(SWAGGER_ACCESS_TOKEN)
   async getRoleByCode(@Param('code') code: string) {
     return new CommonResponse(
       'success',

@@ -9,3 +9,13 @@ export class CommonResponse<T> {
   message: string;
   data: T;
 }
+
+export class UserProfile {
+  username: string;
+  permission = new Permission();
+}
+
+export class Permission {
+  roles: string[];
+  privileges: string[];
+}

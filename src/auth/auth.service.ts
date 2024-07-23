@@ -1,10 +1,15 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from 'src/users/users.service';
-import { LoginRequestDto, LoginResponseDto, RegisterRequestDto } from './dto';
+import { UsersService } from 'src/user/user.service';
+import {
+  LoginRequestDto,
+  LoginResponseDto,
+  RegisterRequestDto,
+} from './auth.dto';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/database/entity/user.entity';
 import { RoleService } from 'src/role/role.service';
+import { UserProfile } from 'src/common/dto/dto';
 
 @Injectable()
 export class AuthService {
@@ -34,11 +39,11 @@ export class AuthService {
     const user = await this.usersService.findOne(req.username);
     const roles = await this.roleService.getRoleByUserId(user.id);
 
-    const sub = {
-      username: req.username,
-      roles: roles,
-    };
-    const payload = { username: req.username, sub: sub };
+    const userProfile = new UserProfile();
+    userProfile.username = req.username;
+    userProfile.permission = roles;
+
+    const payload = { username: req.username, sub: userProfile };
     return {
       access_token: this.jwtService.sign(payload),
     };

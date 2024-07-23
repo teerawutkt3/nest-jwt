@@ -3,28 +3,30 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
+import { UsersModule } from './user/user.module';
 import { JwtStrategy } from './auth/jwt/jwt.strategy';
 import { RoleModule } from './role/role.module';
 import { ConfigModule } from '@nestjs/config';
+import { JobModule } from './job/job.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     TypeOrmModule.forRoot({
-      type: 'mysql',
+      type: 'postgres',
       host: 'localhost',
-      port: 3307,
+      port: 5432,
       username: 'root',
-      password: 'depth1',
-      database: 'nestjs_db',
+      password: 'root',
+      database: 'image_generation_db',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
     }),
     AuthModule,
     UsersModule,
     RoleModule,
+    JobModule,
   ],
   controllers: [AppController],
   providers: [AppService, JwtStrategy],

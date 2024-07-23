@@ -6,14 +6,14 @@ import { SWAGGER_ACCESS_TOKEN } from './common/constant/constants';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const options = new DocumentBuilder()
-    .setTitle('NestJs API')
-    .setDescription('base framework')
+    .setTitle('Image Generation API')
+    .setDescription('Nestjs framework')
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       SWAGGER_ACCESS_TOKEN,
     )
-    .addTag('Your API Tag')
+    .addTag('API')
     .build();
 
   const document = SwaggerModule.createDocument(app, options);
